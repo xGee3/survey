@@ -118,9 +118,9 @@ export default function LocationsPage() {
 
   const generateBarcodeURL = (slug: string) => {
     const surveyUrl = `${baseUrl}/survey/${slug}`
-    // Using barcodes4.me API to generate Code 128 barcode
-    // Format: barcode type, data, width, height
-    return `https://barcodes4.me/barcode/c128b/${encodeURIComponent(surveyUrl)}/3/200/0.jpg`
+    // Using TEC-IT Barcode API (reliable, free service)
+    // Generates Code 128 barcode
+    return `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(surveyUrl)}&code=Code128&translate-esc=on&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`
   }
 
   const downloadQRCode = (slug: string, name: string) => {
@@ -139,7 +139,7 @@ export default function LocationsPage() {
       const barcodeUrl = generateBarcodeURL(slug)
       const barcodeLink = document.createElement('a')
       barcodeLink.href = barcodeUrl
-      barcodeLink.download = `${slug}-barcode.jpg`
+      barcodeLink.download = `${slug}-barcode.gif`
       barcodeLink.click()
     }, 300) // Small delay to ensure QR downloads first
   }
@@ -360,7 +360,7 @@ export default function LocationsPage() {
           <li>Click &quot;Show Preview&quot; to see what the QR code looks like before downloading</li>
           <li>Click &quot;Download QR + Barcode&quot; to get both a high-resolution (600x600) QR code AND a barcode for each location</li>
           <li>Or click &quot;Download All QR Codes + Barcodes&quot; to download all at once (both formats for each location)</li>
-          <li>Each download gives you 2 files: a QR code (PNG) and a barcode (JPG)</li>
+          <li>Each download gives you 2 files: a QR code (PNG) and a barcode (GIF)</li>
           <li>Print the QR codes and/or barcodes and place them at the respective parking locations</li>
           <li>When customers scan either code, they&apos;ll be directed to the survey for that specific location</li>
           <li>Each code is unique to its parking location for accurate tracking</li>
