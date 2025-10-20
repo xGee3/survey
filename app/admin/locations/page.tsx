@@ -11,35 +11,75 @@ export default function LocationsPage() {
   const [editingUrl, setEditingUrl] = useState(false)
   const [tempUrl, setTempUrl] = useState('')
   const [selectedQR, setSelectedQR] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    fetchLocations()
-    // Load base URL from localStorage or use env variable
-    const savedUrl = localStorage.getItem('qr_base_url')
-    const defaultUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    setBaseUrl(savedUrl || defaultUrl)
-    setTempUrl(savedUrl || defaultUrl)
+    fetchData()
   }, [])
 
-  const fetchLocations = async () => {
+  const fetchData = async () => {
     const supabase = createClient()
-    const { data } = await supabase
+
+    // Fetch locations
+    const { data: locationsData } = await supabase
       .from('locations')
       .select('*')
       .order('name')
 
-    if (data) {
-      setLocations(data)
+    if (locationsData) {
+      setLocations(locationsData)
     }
+
+    // Fetch QR base URL from settings
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'qr_base_url')
+      .single()
+
+    const defaultUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const loadedUrl = settingsData?.value || defaultUrl
+    setBaseUrl(loadedUrl)
+    setTempUrl(loadedUrl)
+
     setLoading(false)
   }
 
-  const handleSaveUrl = () => {
-    // Remove trailing slash if present
-    const cleanUrl = tempUrl.replace(/\/$/, '')
-    setBaseUrl(cleanUrl)
-    localStorage.setItem('qr_base_url', cleanUrl)
-    setEditingUrl(false)
+  const handleSaveUrl = async () => {
+    setSaving(true)
+    try {
+      // Remove trailing slash if present
+      const cleanUrl = tempUrl.replace(/\/$/, '')
+
+      const supabase = createClient()
+
+      // Update or insert the setting in the database
+      const { error } = await supabase
+        .from('settings')
+        .upsert({
+          key: 'qr_base_url',
+          value: cleanUrl,
+          description: 'Base URL for QR code generation',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'key'
+        })
+
+      if (error) {
+        console.error('Error saving URL:', error)
+        alert('Failed to save URL. Please try again.')
+        return
+      }
+
+      setBaseUrl(cleanUrl)
+      setEditingUrl(false)
+      alert('✓ URL saved successfully! This setting is now saved across all devices.')
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Failed to save URL. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const generateQRCodeURL = (slug: string, size: number = 300) => {
@@ -103,9 +143,10 @@ export default function LocationsPage() {
                 />
                 <button
                   onClick={handleSaveUrl}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                  disabled={saving}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save
+                  {saving ? 'Saving...' : 'Save'}
                 </button>
                 <button
                   onClick={() => {
@@ -132,9 +173,12 @@ export default function LocationsPage() {
             )}
             {baseUrl.includes('localhost') && (
               <p className="text-xs text-yellow-700 mt-2">
-                ⚠️ Warning: QR codes are pointing to localhost. Users won&apos;t be able to scan these on their phones. Update to your production URL (e.g., https://your-app.vercel.app)
+                ⚠️ Warning: QR codes are pointing to localhost. Users won&apos;t be able to scan these on their phones. Update to your production URL (e.g., https://parkatlsurvey.vercel.app)
               </p>
             )}
+            <p className="text-xs text-gray-600 mt-2">
+              💡 This URL is stored in the database and will be the same across all devices when you log in.
+            </p>
           </div>
         </div>
       </div>
