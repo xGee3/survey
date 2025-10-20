@@ -31,16 +31,25 @@ export default function LocationsPage() {
     }
 
     // Fetch QR base URL from settings
-    const { data: settingsData } = await supabase
+    const { data: settingsData, error: settingsError } = await supabase
       .from('settings')
       .select('value')
       .eq('key', 'qr_base_url')
-      .single()
+      .maybeSingle()
 
     const defaultUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const loadedUrl = settingsData?.value || defaultUrl
-    setBaseUrl(loadedUrl)
-    setTempUrl(loadedUrl)
+
+    // If settings table doesn't exist or setting not found, use default
+    if (settingsError) {
+      console.warn('Could not load QR base URL from database:', settingsError.message)
+      console.warn('Using default URL. Please run the database migration to enable universal URL storage.')
+      setBaseUrl(defaultUrl)
+      setTempUrl(defaultUrl)
+    } else {
+      const loadedUrl = settingsData?.value || defaultUrl
+      setBaseUrl(loadedUrl)
+      setTempUrl(loadedUrl)
+    }
 
     setLoading(false)
   }
@@ -51,10 +60,30 @@ export default function LocationsPage() {
       // Remove trailing slash if present
       const cleanUrl = tempUrl.replace(/\/$/, '')
 
+      if (!cleanUrl) {
+        alert('Please enter a valid URL')
+        setSaving(false)
+        return
+      }
+
       const supabase = createClient()
 
+      // First, try to check if settings table exists by attempting to select
+      const { data: existingSettings, error: selectError } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('key', 'qr_base_url')
+        .maybeSingle()
+
+      // If there's an error and it's because the table doesn't exist
+      if (selectError && selectError.code === '42P01') {
+        alert(`❌ Database Error: The settings table doesn't exist yet.\n\nPlease run the migration SQL in your Supabase dashboard:\n\n1. Go to Supabase SQL Editor\n2. Run the migration from: supabase/migration_settings.sql\n\nError: ${selectError.message}`)
+        setSaving(false)
+        return
+      }
+
       // Update or insert the setting in the database
-      const { error } = await supabase
+      const { error: upsertError } = await supabase
         .from('settings')
         .upsert({
           key: 'qr_base_url',
@@ -65,18 +94,18 @@ export default function LocationsPage() {
           onConflict: 'key'
         })
 
-      if (error) {
-        console.error('Error saving URL:', error)
-        alert('Failed to save URL. Please try again.')
+      if (upsertError) {
+        console.error('Error saving URL:', upsertError)
+        alert(`❌ Failed to save URL.\n\nError: ${upsertError.message}\n\nPlease check:\n1. Settings table exists (run migration)\n2. You are logged in as admin\n3. Database permissions are correct`)
         return
       }
 
       setBaseUrl(cleanUrl)
       setEditingUrl(false)
-      alert('✓ URL saved successfully! This setting is now saved across all devices.')
-    } catch (error) {
+      alert('✓ URL saved successfully!\n\nThis setting is now saved in the database and will be available on all devices (mobile, computer, tablet) when you log in.')
+    } catch (error: any) {
       console.error('Error:', error)
-      alert('Failed to save URL. Please try again.')
+      alert(`❌ An unexpected error occurred.\n\nError: ${error?.message || 'Unknown error'}\n\nPlease try again or check the console for details.`)
     } finally {
       setSaving(false)
     }
@@ -173,11 +202,16 @@ export default function LocationsPage() {
             )}
             {baseUrl.includes('localhost') && (
               <p className="text-xs text-yellow-700 mt-2">
-                ⚠️ Warning: QR codes are pointing to localhost. Users won&apos;t be able to scan these on their phones. Update to your production URL (e.g., https://parkatlsurvey.vercel.app)
+                ⚠️ Warning: QR codes are pointing to localhost. Users won&apos;t be able to scan these on their phones. Update to your production URL: <strong>https://parkatlsurvey.vercel.app</strong> (not the git deployment URL)
               </p>
             )}
-            <p className="text-xs text-gray-600 mt-2">
-              💡 This URL is stored in the database and will be the same across all devices when you log in.
+            {baseUrl.includes('git-') && baseUrl.includes('projects.vercel.app') && (
+              <p className="text-xs text-yellow-700 mt-2">
+                ⚠️ Warning: You&apos;re using a git deployment URL. This may require login. Use your main production URL instead: <strong>https://parkatlsurvey.vercel.app</strong>
+              </p>
+            )}
+            <p className="text-xs text-green-700 mt-2">
+              ✅ Universal Storage: This URL is stored in the database and will work on all devices (computer, phone, tablet) when you log in.
             </p>
           </div>
         </div>
