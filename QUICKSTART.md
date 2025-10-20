@@ -15,9 +15,9 @@ Your parking survey web app has been successfully built! All core features are i
 cp .env.example .env.local
 
 # 4. Add your credentials to .env.local:
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url_here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
