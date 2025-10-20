@@ -116,39 +116,22 @@ export default function LocationsPage() {
     return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(surveyUrl)}`
   }
 
-  const generateBarcodeURL = (slug: string) => {
-    const surveyUrl = `${baseUrl}/survey/${slug}`
-    // Using TEC-IT Barcode API (reliable, free service)
-    // Generates Code 128 barcode
-    return `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(surveyUrl)}&code=Code128&translate-esc=on&dpi=96&imagetype=Gif&rotation=0&color=%23000000&bgcolor=%23ffffff&qunit=Mm&quiet=0`
-  }
-
   const downloadQRCode = (slug: string, name: string) => {
     // Generate higher resolution QR code for download (600x600)
     const surveyUrl = `${baseUrl}/survey/${slug}`
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(surveyUrl)}`
 
-    // Download QR Code
-    const qrLink = document.createElement('a')
-    qrLink.href = qrUrl
-    qrLink.download = `${slug}-qr-code.png`
-    qrLink.click()
-
-    // Download Barcode automatically after QR code
-    setTimeout(() => {
-      const barcodeUrl = generateBarcodeURL(slug)
-      const barcodeLink = document.createElement('a')
-      barcodeLink.href = barcodeUrl
-      barcodeLink.download = `${slug}-barcode.gif`
-      barcodeLink.click()
-    }, 300) // Small delay to ensure QR downloads first
+    const a = document.createElement('a')
+    a.href = qrUrl
+    a.download = `${slug}-qr-code.png`
+    a.click()
   }
 
   const downloadAllQRCodes = () => {
     locations.forEach((location, index) => {
       setTimeout(() => {
         downloadQRCode(location.slug, location.name)
-      }, index * 1000) // Stagger downloads by 1 second (increased for both QR + barcode)
+      }, index * 500) // Stagger downloads by 500ms
     })
   }
 
@@ -168,7 +151,7 @@ export default function LocationsPage() {
           onClick={downloadAllQRCodes}
           className="btn-primary"
         >
-          Download All QR Codes + Barcodes
+          Download All QR Codes
         </button>
       </div>
 
@@ -300,7 +283,7 @@ export default function LocationsPage() {
                         onClick={() => downloadQRCode(location.slug, location.name)}
                         className="text-primary-600 hover:text-primary-900 font-medium"
                       >
-                        Download QR + Barcode
+                        Download QR
                       </button>
                     </td>
                   </tr>
@@ -344,7 +327,7 @@ export default function LocationsPage() {
                 }}
                 className="btn-primary w-full mt-4"
               >
-                Download QR Code + Barcode
+                Download This QR Code
               </button>
             </div>
           </div>
@@ -353,17 +336,16 @@ export default function LocationsPage() {
 
       <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">
-          QR Code & Barcode Instructions
+          QR Code Instructions
         </h2>
         <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
           <li>First, set the correct base URL above (your production domain, not localhost)</li>
           <li>Click &quot;Show Preview&quot; to see what the QR code looks like before downloading</li>
-          <li>Click &quot;Download QR + Barcode&quot; to get both a high-resolution (600x600) QR code AND a barcode for each location</li>
-          <li>Or click &quot;Download All QR Codes + Barcodes&quot; to download all at once (both formats for each location)</li>
-          <li>Each download gives you 2 files: a QR code (PNG) and a barcode (GIF)</li>
-          <li>Print the QR codes and/or barcodes and place them at the respective parking locations</li>
-          <li>When customers scan either code, they&apos;ll be directed to the survey for that specific location</li>
-          <li>Each code is unique to its parking location for accurate tracking</li>
+          <li>Click &quot;Download QR&quot; to get a high-resolution (600x600) QR code for each location</li>
+          <li>Or click &quot;Download All QR Codes&quot; to download all at once</li>
+          <li>Print the QR codes and place them at the respective parking locations</li>
+          <li>When customers scan the QR code, they&apos;ll be directed to the survey for that specific location</li>
+          <li>Each QR code is unique to its parking location for accurate tracking</li>
         </ul>
       </div>
     </div>
